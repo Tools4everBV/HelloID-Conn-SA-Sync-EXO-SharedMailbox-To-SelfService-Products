@@ -1690,7 +1690,7 @@ catch {
 
 Hid-Write-Status -Event Information -Message "------[Summary]------"
 
-Hid-Write-Status -Event Information -Message "Total Active Directory Group(s) in scope [$(($mailboxesInScope | Measure-Object).Count)]"
+Hid-Write-Status -Event Information -Message "Total Exchange Online Shared Mailboxes in scope [$(($mailboxesInScope | Measure-Object).Count)]"
 
 if ($overwriteExistingProduct -eq $true -or $overwriteExistingProductAction -eq $true -or $addMissingProductAction -eq $true) {
     Hid-Write-Status -Event Information "Total HelloID Self service Product(s) already exist (and will be updated) [$(($existingProducts | Measure-Object).Count)]. Overwrite Product: [$($overwriteExistingProduct)]"
