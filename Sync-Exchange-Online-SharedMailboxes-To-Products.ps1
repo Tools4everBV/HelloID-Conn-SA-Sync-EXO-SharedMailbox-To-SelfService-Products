@@ -970,6 +970,8 @@ try {
         ErrorAction  = "Stop" # Makes sure the action enters the catch when an error occurs
     }
 
+    $AddRecipientPermissions = Add-RecipientPermission @addSendAsPermissionSplatParams
+
     Write-Information "Successfully granted [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]"
 
     $Log = @{
