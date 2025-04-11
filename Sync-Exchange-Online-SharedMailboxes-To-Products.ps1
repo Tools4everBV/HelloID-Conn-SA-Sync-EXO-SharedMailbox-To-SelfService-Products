@@ -22,45 +22,83 @@ $verboseLogging = $false
 # $portalApiSecret = "" # Set from Global Variable
 
 # Exchange Online Connection Configuration
-# $MicrosoftEntraIDOrganization = "" # Set from Global Variable
-# $MicrosoftEntraIDtenantID = "" # Set from Global Variable
-# $MicrosoftEntraIDAppId = "" # Set from Global Variable
-# $MicrosoftEntraIDAppSecret = "" # Set from Global Variable
-$exchangeMailboxesFilter = "DisplayName -like 'shared-*'" # Optional, when no filter is provided ($exchangeMailboxesFilter = $null), all mailboxes will be queried
+# $EntraOrganization  = "" # Set from Global Variable
+# $EntraTenantID = "" # Set from Global Variable
+# $EntraAppID = "" # Set from Global Variable
+# $EntraAppSecret = "" # Set from Global Variable
+$exchangeMailboxesFilter = "DisplayName -like 'Sharedmailbox*'" # Optional, when no filter is provided ($exchangeMailboxesFilter = $null), all mailboxes will be queried
 
 # PowerShell commands to import
-$exchangeOnlineCommands = @(
+$commands = @(
     "Get-User"
     , "Get-EXOMailbox"
 ) # Fixed list of commands required by script - only change when missing commands
 
-#HelloID Product Configuration
-$productAccessGroup = "Local/__HelloID Self service users"  # If not found, the product is created without extra Access Group
-$calculateProductResourceOwnerPrefixSuffix = $false # If True the resource owner group will be defined per product based on specfied prefix or suffix - If no calculated group is found, the group from $productResourseOwner will be used
-$calculatedResourceOwnerGroupSource = "Local" # Specify the source of the groups - if left empty, this will result in creation of a new group
-$calculatedResourceOwnerGroupPrefix = "" # Specify prefix to recognize the owner group - the owner group will be queried based on the Shared mailbox name and the specified prefix and suffix - if both left empty, this will result in creation of a new group - if group is not found, it will be created
-$calculatedResourceOwnerGroupSuffix = " Resource Owner" # Specify suffix to recognize the owner group - the owner group will be queried based on the Shared mailbox name and the specified prefix and suffix - if both left empty, this will result in creation of a new group - if group is not found, it will be created
-$productResourseOwner = "Local/__HelloID_Admin" # If left empty the groupname will be: "Resource owners [target-systeem] - [Product_Naam]") - Only used when is false
-$productApprovalWorkflowId = "81bd4bb4-838d-46d3-a6da-3f0eba9e7f00" # If empty, the Default HelloID Workflow is used. If specified Workflow does not exist the Product creation will raise an error.
-$productVisibility = "All" # If empty, "Disabled" is used. Supported options: All, ResourceOwnerAndManager, ResourceOwner, Disabled
-$productRequestCommentOption = "Required" # If empty, "Optional" is used. Supported options: Optional, Hidden, Required
-$productAllowMultipleRequests = $false # If True the product can be requested unlimited times
+######################################################################################
+#HelloID Self service Product Configuration
+######################################################################################
+
+######################################################################################
+# Default configuration
+# Determine group that give access to the synct products. If not found, the product is created without extra Access Group
+$productAccessGroup = "Local/__HelloID Selfservice Users" 
+# Product approval workflow. Fill in the GUID of the workflow If empty, the Default HelloID Workflow is used. If specified Workflow does not exist the Product creation will raise an error.
+$productApprovalWorkflowId = "6a7e9e2c-f032-4121-9ed2-6135179d8d91" # Tip open the Approval workflow in HelloID, the GUID can be found in the browser URL
+# Product Visibility. If empty, "Disabled" is used. Supported options: All, ResourceOwnerAndManager, ResourceOwner, Disabled
+$productVisibility = "All"
+# Product comment option. If empty, "Optional" is used. Supported options: Optional, Hidden, Required
+$productRequestCommentOption = "Optional"
+# Products can be requested unlimited times. If $false the product can be only requested once
+$productAllowMultipleRequests = $false
+# Product icon. Fill in the name that you can also configure in a product [examples: "windows" or "group"]
 $productFaIcon = "envelope"
-$productCategory = "Shared Mailboxes" # If the category is not found, the task will fail
-$productReturnOnUserDisable = $true # If True the product will be returned when the user owning the product gets disabled
+# Product category. If the category is not found, the task will fail
+$productCategory = "Mailbox"
+# Return product when a user is disabled in HelloID. If $true the product is automatically returned on disable.
+$productReturnOnUserDisable = $true
+# Remove product when group is not found. If $false product will be disabled
+$removeProduct = $true
+######################################################################################
 
-$removeProduct = $true # If False product will be disabled
-$overwriteExistingProduct = $true # If True existing product will be overwritten with the input from this script (e.g. the approval worklow or icon). Only use this when you actually changed the product input
-# Note: Actions are always overwritten, no compare takes place between the current actions and the actions this sync would set
-$overwriteAccessGroup = $false # Should be on false by default, only set this to true to overwrite product access group - Only meant for "manual" bulk update, not daily scheduled
-# Note: Access group is always overwritten, no compare takes place between the current access group and the access group this sync would set
+######################################################################################
+# Configuration option 1
+# Sync will add the same resourceowner group to every product [value = $false].
+$calculateProductResourceOwnerPrefixSuffix = $false # Comment out if not used
+# Product resource owner group
+$productResourseOwner = "Local/HelloID Shared Mailbox Product Owners"
+######################################################################################
 
-#Target System Configuration
+######################################################################################
+# Configuration option 2
+# Sync will add a different resourceowner group to every product. Members in this group are not filled with this sync [value = $true].
+# $calculateProductResourceOwnerPrefixSuffix = $true # Comment out if not used
+# Type of group that will be created if not found [value = "AzureAD" or "Local"]
+$calculatedResourceOwnerGroupSource = "Local"
+# Set a prefix before the queried Entra ID group name. If not found the group will be created. [Filling Prefix or Suffix is a mimimum requerement for option 2]
+$calculatedResourceOwnerGroupPrefix = ""
+# Set a suffix after the queried Entra ID group name. If not found the group will be created. [Filling Prefix or Suffix is a mimimum requerement for option 2]
+$calculatedResourceOwnerGroupSuffix = " - Owner"
+######################################################################################
+
+#######################################################################################
+# Administrator configuration
+# If $true existing product will be overwritten with the input from this script (e.g. the, description, approval worklow or icon). Only use this when you actually changed the product input
+$overwriteExistingProduct = $false
+# If $true existing product actions will be overwritten with the input from this script. Only use this when you actually changed the script or variables for the action(s)
+$overwriteExistingProductAction = $false # Note: Actions are always overwritten, no compare takes place between the current actions and the actions this sync would set
+# If $true missing product actions (according to the the input from this script) will be added
+$addMissingProductAction = $false 
+# Should be on false by default, only set this to true to overwrite product access group - Only meant for "manual" bulk update, not daily scheduled
+$overwriteAccessGroup = $false # Note: Access group is always overwritten, no compare takes place between the current access group and the access group this sync would set
+#######################################################################################
+
+#######################################################################################
 # Dynamic property invocation
-# The prefix will be used as the first part HelloID Self service Product SKU.
-$ProductSkuPrefix = "SHRDMBX" 
-# The value of the property will be used as HelloID Self service Product SKU
+# The prefix will be used as the first part HelloID Self service Product SKU. Please make sure this value is the same in all related sync scripts
+$ProductSkuPrefix = "SHRDMBX"
+# The value of the property will be used as HelloID Self service Product SKU. Please make sure this value is the same in all related sync scripts
 $exchangeMailboxUniqueProperty = "GUID"
+#######################################################################################
 
 #region functions
 function Resolve-HTTPError {
@@ -233,15 +271,16 @@ $User = $request.requestedFor.userName
 $AutoMapping = $true
 
 # Exchange Online Connection Configuration
-# $MicrosoftEntraIDOrganization = "" # Set from Global Variable
-# $MicrosoftEntraIDtenantID = "" # Set from Global Variable
-# $MicrosoftEntraIDAppId = "" # Set from Global Variable
-# $MicrosoftEntraIDAppSecret = "" # Set from Global Variable
+# $EntraOrganization  = "" # Set from Global Variable
+# $EntraTenantID = "" # Set from Global Variable
+# $EntraAppID = "" # Set from Global Variable
+# $EntraAppSecret = "" # Set from Global Variable
 
 # PowerShell commands to import
-$exchangeOnlineCommands = @(
+$commands = @(
     "Get-User"
     , "Get-EXOMailbox"
+    , "Add-MailboxPermission"
 )
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
@@ -338,12 +377,12 @@ try {
     Write-Verbose "Creating Access Token"
 
     $baseUri = "https://login.microsoftonline.com/"
-    $authUri = $baseUri + "$MicrosoftEntraIDTenantId/oauth2/token"
+    $authUri = $baseUri + "$EntraTenantID/oauth2/token"
   
     $body = @{
         grant_type    = "client_credentials"
-        client_id     = "$MicrosoftEntraIDAppID"
-        client_secret = "$MicrosoftEntraIDAppSecret"
+        client_id     = "$EntraAppID"
+        client_secret = "$EntraAppSecret"
         resource      = "https://outlook.office365.com"
     }
   
@@ -354,8 +393,8 @@ try {
     Write-Verbose "Connecting to Exchange Online"
 
     $exchangeSessionParams = @{
-        Organization     = $MicrosoftEntraIDOrganization
-        AppID            = $MicrosoftEntraIDAppID
+        Organization     = $EntraOrganization 
+        AppID            = $EntraAppID
         AccessToken      = $accessToken
         CommandName      = $commands
         ShowBanner       = $false
@@ -495,15 +534,16 @@ $User = $request.requestedFor.userName
 $AutoMapping = $true
 
 # Exchange Online Connection Configuration
-# $MicrosoftEntraIDOrganization = "" # Set from Global Variable
-# $MicrosoftEntraIDtenantID = "" # Set from Global Variable
-# $MicrosoftEntraIDAppId = "" # Set from Global Variable
-# $MicrosoftEntraIDAppSecret = "" # Set from Global Variable
+# $EntraOrganization  = "" # Set from Global Variable
+# $EntraTenantID = "" # Set from Global Variable
+# $EntraAppID = "" # Set from Global Variable
+# $EntraAppSecret = "" # Set from Global Variable
 
 # PowerShell commands to import
-$exchangeOnlineCommands = @(
+$commands = @(
     "Get-User"
     , "Get-EXOMailbox"
+    , "Remove-MailboxPermission"
 )
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
@@ -600,12 +640,12 @@ try {
     Write-Verbose "Creating Access Token"
 
     $baseUri = "https://login.microsoftonline.com/"
-    $authUri = $baseUri + "$MicrosoftEntraIDTenantId/oauth2/token"
+    $authUri = $baseUri + "$EntraTenantID/oauth2/token"
   
     $body = @{
         grant_type    = "client_credentials"
-        client_id     = "$MicrosoftEntraIDAppID"
-        client_secret = "$MicrosoftEntraIDAppSecret"
+        client_id     = "$EntraAppID"
+        client_secret = "$EntraAppSecret"
         resource      = "https://outlook.office365.com"
     }
   
@@ -616,8 +656,8 @@ try {
     Write-Verbose "Connecting to Exchange Online"
 
     $exchangeSessionParams = @{
-        Organization     = $MicrosoftEntraIDOrganization
-        AppID            = $MicrosoftEntraIDAppID
+        Organization     = $EntraOrganization 
+        AppID            = $EntraAppID
         AccessToken      = $accessToken
         CommandName      = $commands
         ShowBanner       = $false
@@ -709,18 +749,15 @@ try {
 
     $removeFullAccessPermission = Remove-MailboxPermission @removeFullAccessPermissionSplatParams
 
-    Hid-Write-Status -Event Success -Message "Successfully revoked [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity)]"
-    Hid-Write-Summary -Event Success -Message "Successfully revoked [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity)]"
-
-    Write-Information "Successfully revoked [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]"
+    Write-Information "Successfully revoked [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]"
 
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Successfully revoked [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
+        Message           = "Successfully revoked [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
-        TargetIdentifier  = $addFullAccessPermissionSplatParams.User.Identity # optional (free format text)
+        TargetDisplayName = $removeFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
+        TargetIdentifier  = $removeFullAccessPermissionSplatParams.User.Identity # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
@@ -734,15 +771,15 @@ catch {
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Error revoking [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
+        Message           = "Error revoking [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
         IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
-        TargetIdentifier  = $addFullAccessPermissionSplatParams.User.Identity # optional (free format text)
+        TargetDisplayName = $removeFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
+        TargetIdentifier  = $removeFullAccessPermissionSplatParams.User.Identity # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
 
-    throw "Error revoking [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw "Error revoking [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 '@
 #endregion Remove Full Access Permission script
@@ -761,15 +798,17 @@ $User = $request.requestedFor.userName
 $AutoMapping = $true
 
 # Exchange Online Connection Configuration
-# $MicrosoftEntraIDOrganization = "" # Set from Global Variable
-# $MicrosoftEntraIDtenantID = "" # Set from Global Variable
-# $MicrosoftEntraIDAppId = "" # Set from Global Variable
-# $MicrosoftEntraIDAppSecret = "" # Set from Global Variable
+# $EntraOrganization  = "" # Set from Global Variable
+# $EntraTenantID = "" # Set from Global Variable
+# $EntraAppID = "" # Set from Global Variable
+# $EntraAppSecret = "" # Set from Global Variable
 
 # PowerShell commands to import
-$exchangeOnlineCommands = @(
+$commands = @(
     "Get-User"
     , "Get-EXOMailbox"
+    , "Add-RecipientPermission"
+
 )
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
@@ -866,12 +905,12 @@ try {
     Write-Verbose "Creating Access Token"
 
     $baseUri = "https://login.microsoftonline.com/"
-    $authUri = $baseUri + "$MicrosoftEntraIDTenantId/oauth2/token"
+    $authUri = $baseUri + "$EntraTenantID/oauth2/token"
   
     $body = @{
         grant_type    = "client_credentials"
-        client_id     = "$MicrosoftEntraIDAppID"
-        client_secret = "$MicrosoftEntraIDAppSecret"
+        client_id     = "$EntraAppID"
+        client_secret = "$EntraAppSecret"
         resource      = "https://outlook.office365.com"
     }
   
@@ -882,8 +921,8 @@ try {
     Write-Verbose "Connecting to Exchange Online"
 
     $exchangeSessionParams = @{
-        Organization     = $MicrosoftEntraIDOrganization
-        AppID            = $MicrosoftEntraIDAppID
+        Organization     = $EntraOrganization 
+        AppID            = $EntraAppID
         AccessToken      = $accessToken
         CommandName      = $commands
         ShowBanner       = $false
@@ -1018,15 +1057,16 @@ $User = $request.requestedFor.userName
 $AutoMapping = $true
 
 ## Exchange Online Connection Configuration
-# $MicrosoftEntraIDOrganization = "" # Set from Global Variable
-# $MicrosoftEntraIDtenantID = "" # Set from Global Variable
-# $MicrosoftEntraIDAppId = "" # Set from Global Variable
-# $MicrosoftEntraIDAppSecret = "" # Set from Global Variable
+# $EntraOrganization  = "" # Set from Global Variable
+# $EntraTenantID = "" # Set from Global Variable
+# $EntraAppID = "" # Set from Global Variable
+# $EntraAppSecret = "" # Set from Global Variable
 
 # PowerShell commands to import
-$exchangeOnlineCommands = @(
+$commands = @(
     "Get-User"
     , "Get-EXOMailbox"
+    , "Remove-RecipientPermission"
 )
 
 # Set TLS to accept TLS, TLS 1.1 and TLS 1.2
@@ -1123,12 +1163,12 @@ try {
     Write-Verbose "Creating Access Token"
 
     $baseUri = "https://login.microsoftonline.com/"
-    $authUri = $baseUri + "$MicrosoftEntraIDTenantId/oauth2/token"
+    $authUri = $baseUri + "$EntraTenantID/oauth2/token"
   
     $body = @{
         grant_type    = "client_credentials"
-        client_id     = "$MicrosoftEntraIDAppID"
-        client_secret = "$MicrosoftEntraIDAppSecret"
+        client_id     = "$EntraAppID"
+        client_secret = "$EntraAppSecret"
         resource      = "https://outlook.office365.com"
     }
   
@@ -1139,8 +1179,8 @@ try {
     Write-Verbose "Connecting to Exchange Online"
 
     $exchangeSessionParams = @{
-        Organization     = $MicrosoftEntraIDOrganization
-        AppID            = $MicrosoftEntraIDAppID
+        Organization     = $EntraOrganization 
+        AppID            = $EntraAppID
         AccessToken      = $accessToken
         CommandName      = $commands
         ShowBanner       = $false
@@ -1231,15 +1271,15 @@ try {
 
     $removeSendAsPermission = Remove-RecipientPermission @removeSendAsPermissionSplatParams
 
-    Write-Information "Successfully revoked [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]"
+    Write-Information "Successfully revoked [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]"
 
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Successfully revoked [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
+        Message           = "Successfully revoked [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
-        TargetIdentifier  = $addSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
+        TargetDisplayName = $removeSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
+        TargetIdentifier  = $removeSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
@@ -1253,15 +1293,15 @@ catch {
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Error revoking [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
+        Message           = "Error revoking [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
         IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
-        TargetIdentifier  = $addSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
+        TargetDisplayName = $removeSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
+        TargetIdentifier  = $removeSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
 
-    throw "Error revoking [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw "Error revoking [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 '@
 #endregion Remove Send As Permission script
@@ -1292,12 +1332,12 @@ try {
     Write-Verbose "Creating Access Token"
 
     $baseUri = "https://login.microsoftonline.com/"
-    $authUri = $baseUri + "$MicrosoftEntraIDTenantId/oauth2/token"
+    $authUri = $baseUri + "$EntraTenantID/oauth2/token"
     
     $body = @{
         grant_type    = "client_credentials"
-        client_id     = "$MicrosoftEntraIDAppID"
-        client_secret = "$MicrosoftEntraIDAppSecret"
+        client_id     = "$EntraAppID"
+        client_secret = "$EntraAppSecret"
         resource      = "https://outlook.office365.com"
     }
     
@@ -1308,10 +1348,10 @@ try {
     Write-Verbose "Connecting to Exchange Online"
 
     $exchangeSessionParams = @{
-        Organization     = $MicrosoftEntraIDOrganization
-        AppID            = $MicrosoftEntraIDAppID
+        Organization     = $EntraOrganization 
+        AppID            = $EntraAppID
         AccessToken      = $accessToken
-        CommandName      = $exchangeOnlineCommands
+        CommandName      = $commands
         ShowBanner       = $false
         ShowProgress     = $false
         TrackPerformance = $false
@@ -1342,14 +1382,24 @@ try {
         , "RecipientTypeDetails"
     )
 
-    $exchangeQuerySplatParams = @{
-        Filter               = $exchangeMailboxesFilter
-        Properties           = $properties
-        RecipientTypeDetails = "SharedMailbox"
-        ResultSize           = "Unlimited"
+    if ($exchangeMailboxesFilter -eq $null) {
+        $exchangeQuerySplatParams = @{
+            Properties           = $properties
+            RecipientTypeDetails = "SharedMailbox"
+            ResultSize           = "Unlimited"
+        }
+        Hid-Write-Status -Event Information -Message "Querying Exchange Online Shared Mailboxes"
+    }
+    else {
+        $exchangeQuerySplatParams = @{
+            Filter               = $exchangeMailboxesFilter
+            Properties           = $properties
+            RecipientTypeDetails = "SharedMailbox"
+            ResultSize           = "Unlimited"
+        } 
+        Hid-Write-Status -Event Information -Message "Querying Exchange Online Shared Mailboxes that match filter [$($exchangeQuerySplatParams.Filter)]"
     }
 
-    Hid-Write-Status -Event Information -Message "Querying Exchange Online Shared Mailboxes that match filter [$($exchangeQuerySplatParams.Filter)]"
     $mailboxes = Get-EXOMailbox @exchangeQuerySplatParams | Select-Object $properties
 
     $mailboxesInScope = [System.Collections.Generic.List[Object]]::New()
@@ -1781,7 +1831,7 @@ try {
                     }
                     else {
                         if ($verboseLogging -eq $true) {
-                            Hid-Write-Status -Event Warning "DryRun: Would add HelloID Access Group [$($helloIDAccessGroup.Name)] to HelloID Self service Product [$($createdHelloIDSelfServiceProduct.Name)]"
+                            Hid-Write-Status -Event Warning "DryRun: Would add HelloID Access Group [$($helloIDAccessGroup.Name)] to HelloID Self service Product [$($createHelloIDSelfServiceProductBody.Name)]"
                         }
                     }
                 }
