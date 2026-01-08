@@ -1708,7 +1708,7 @@ try {
             
             # Time Limit
             hasTimeLimit               = $false
-            managerCanOverrideDuration = $true
+            managerCanOverrideDuration = $false
             limitType                  = "Maximum"
             ownershipMaxDuration       = 3650
         }
