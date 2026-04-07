@@ -16,7 +16,7 @@ Synchronizes Exchange Online Shared Mailboxes to HelloID Self service products
   - [Requirements](#requirements)
   - [Introduction](#introduction)
   - [Getting started](#getting-started)
-      - [Create an API key and secret](#create-an-api-key-and-secret)
+      - - [App Registration & Certificate Setup](#app-registration-&-certificate-setup)
     - [Installing the Microsoft Exchange Online PowerShell V3.1 module](#installing-the-microsoft-exchange-online-powershell-v31-module)
     - [Getting the Microsoft Entra ID graph API access](#getting-the-microsoft-entra-id-graph-api-access)
       - [Creating the Microsoft Entra ID App Registration and certificate](#creating-the-microsoft-entra-id-app-registration-and-certificate)
