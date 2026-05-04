@@ -16,14 +16,16 @@ Synchronizes Exchange Online Shared Mailboxes to HelloID Self service products
   - [Requirements](#requirements)
   - [Introduction](#introduction)
   - [Getting started](#getting-started)
-      - - [App Registration & Certificate Setup](#app-registration-&-certificate-setup)
+      - [App Registration \& Certificate Setup](#app-registration--certificate-setup)
+      - [HelloID-specific configuration](#helloid-specific-configuration)
+      - [Convert .pfx to base64 string](#convert-pfx-to-base64-string)
+    - [Connection settings](#connection-settings)
     - [Installing the Microsoft Exchange Online PowerShell V3.1 module](#installing-the-microsoft-exchange-online-powershell-v31-module)
     - [Getting the Microsoft Entra ID graph API access](#getting-the-microsoft-entra-id-graph-api-access)
       - [Creating the Microsoft Entra ID App Registration and certificate](#creating-the-microsoft-entra-id-app-registration-and-certificate)
       - [Application Registration](#application-registration)
       - [Configuring App Permissions](#configuring-app-permissions)
       - [Assign Microsoft Entra ID roles to the application](#assign-microsoft-entra-id-roles-to-the-application)
-      - [Authentication and Authorization](#authentication-and-authorization)
     - [Synchronization settings](#synchronization-settings)
   - [Remarks](#remarks)
   - [Getting help](#getting-help)
@@ -67,19 +69,31 @@ Once you have completed the Microsoft setup and followed their best practices, c
   - Assign the **Exchange Administrator** role to the App Registration
 - **Certificate:**
   - Upload the public key file (.cer) in Entra ID
-  - Provide the certificate as a Base64 string in HelloID. For instructions on creating the certificate and obtaining the base64 string, refer to our forum post: [Setting up a certificate for Microsoft Graph API in HelloID connectors](https://forum.helloid.com/forum/helloid-provisioning/5338-instruction-setting-up-a-certificate-for-microsoft-graph-api-in-helloid-connectors#post5338)
+  - Provide the certificate as a Base64 string in HelloID.
+
+#### Convert .pfx to base64 string
+HelloID requires a base64 string to import the certificate. With the example below, it is possible to create a base64 string
+
+```Powershell
+$filePath = 'C:\Cert'
+$pfxCertName = 'Cert.pfx'
+$pfxPath = "$filePath\$pfxCertName"
+
+$fileContentBytes = [System.IO.File]::ReadAllBytes("$pfxPath")
+[System.Convert]::ToBase64String($fileContentBytes) | Set-Content "$filePath\HelloID_Cert_Base64.txt"
+```
 
 ### Connection settings
 
 The following global variables must be configured in HelloID when importing and configuring the delegated form.
 
-| Setting | Description | Mandatory |
-| --- | --- | --- |
-| EntraIdOrganization | The Entra organization name (domain) | Yes |
-| EntraIdTenantId | The Entra tenant ID (GUID) | Yes |
-| EntraIdAppId | The unique identifier (ID) of the App Registration in Microsoft Entra ID | Yes |
-| EntraIdCertificateBase64String | The Base64-encoded string representation of the app certificate | Yes |
-| EntraIdCertificatePassword | The password associated with the app certificate | Yes |
+| Setting                        | Description                                                              | Mandatory |
+| ------------------------------ | ------------------------------------------------------------------------ | --------- |
+| EntraIdOrganization            | The Entra organization name (domain)                                     | Yes       |
+| EntraIdTenantId                | The Entra tenant ID (GUID)                                               | Yes       |
+| EntraIdAppId                   | The unique identifier (ID) of the App Registration in Microsoft Entra ID | Yes       |
+| EntraIdCertificateBase64String | The Base64-encoded string representation of the app certificate          | Yes       |
+| EntraIdCertificatePassword     | The password associated with the app certificate                         | Yes       |
 
 ### Installing the Microsoft Exchange Online PowerShell V3.1 module
 Since we use the cmdlets from the Microsoft Exchange Online PowerShell module, it is required this module is installed and available for the service account.
