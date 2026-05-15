@@ -493,28 +493,29 @@ catch {
 try {
     # More information about the cmdlet and the supported parameters: https://learn.microsoft.com/en-us/powershell/module/exchange/add-mailboxpermission?view=exchange-ps
     $addFullAccessPermissionSplatParams = @{
-        Identity        = $exchangeMailbox # The Exchange mailbox
-        User            = $exchangeUser # The object to add the permission to the Exchange mailbox to. Can be a user and group object
-        AccessRights    = "FullAccess" # The type of permission to add
-        InheritanceType = "All" # Specifies how permissions are inherited by folders in the mailbox
-        AutoMapping     = $AutoMapping # Automatically add mailboxes to a user's Outlook profile
-        Confirm         = $false # Avoids the prompt for confirmation (as this cannot be confirmed when running an automated task)
-        ErrorAction     = "Stop" # Makes sure the action enters the catch when an error occurs
-    }
+        Identity        = $exchangeMailbox.Guid
+        User            = $exchangeUser.guid
+        AccessRights    = "FullAccess"
+        InheritanceType = "All"
+        AutoMapping     = $AutoMapping
+        ErrorAction     = "Stop"
+        Confirm         = $false
+        WarningAction   = "SilentlyContinue"
+    } 
 
-    Write-Verbose "Granting [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]"
+    Write-Verbose "Granting [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]"
 
     $addFullAccessPermission = Add-MailboxPermission @addFullAccessPermissionSplatParams
 
-    Write-Information "Successfully granted [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]"
+    Write-Information "Successfully granted [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]"
 
     $Log = @{
         Action            = "GrantMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Successfully granted [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
+        Message           = "Successfully granted permission [FullAccess] to mailbox [$($exchangeMailbox.DisplayName) ($($exchangeMailbox.Guid))] for user [$($exchangeUser.userPrincipalName) ($($exchangeUser.guid))]" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
-        TargetIdentifier  = $addFullAccessPermissionSplatParams.User.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
@@ -528,15 +529,15 @@ catch {
     $Log = @{
         Action            = "GrantMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Error granting [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
+        Message           = "Error granting [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
         IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
-        TargetIdentifier  = $addFullAccessPermissionSplatParams.User.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
 
-    throw "Error granting [FullAccess] permission for user [$($addFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($addFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw "Error granting [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 '@
 #endregion Add Full Access Permission script
@@ -761,27 +762,27 @@ catch {
 try {
     # More information about the cmdlet and the supported parameters: https://learn.microsoft.com/en-us/powershell/module/exchange/remove-mailboxpermission?view=exchange-ps
     $removeFullAccessPermissionSplatParams = @{
-        Identity        = $exchangeMailbox # The Exchange mailbox
-        User            = $exchangeUser # The object to remove the permission to the Exchange mailbox from. Can be a user and group object
-        AccessRights    = "FullAccess" # The type of permission to remove
-        InheritanceType = "All" # Specifies how permissions are inherited by folders in the mailbox
-        Confirm         = $false # Avoids the prompt for confirmation (as this cannot be confirmed when running an automated task)
-        ErrorAction     = "Stop" # Makes sure the action enters the catch when an error occurs
+        Identity      = $exchangeMailbox.Guid
+        User          = $exchangeUser.guid
+        AccessRights  = "FullAccess"
+        ErrorAction   = "Stop"
+        Confirm       = $false
+        WarningAction = "SilentlyContinue"
     }
 
-    Write-Verbose "Revoking [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity)]"
+    Write-Verbose "Revoking [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]"
 
     $removeFullAccessPermission = Remove-MailboxPermission @removeFullAccessPermissionSplatParams
 
-    Write-Information "Successfully revoked [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]"
+    Write-Information "Successfully revoked [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]"
 
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Successfully revoked [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
+        Message           = "Successfully revoked [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $removeFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
-        TargetIdentifier  = $removeFullAccessPermissionSplatParams.User.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
@@ -795,15 +796,15 @@ catch {
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Error revoking [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
+        Message           = "Error revoking [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
         IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $removeFullAccessPermissionSplatParams.User.DisplayName # optional (free format text)
-        TargetIdentifier  = $removeFullAccessPermissionSplatParams.User.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
 
-    throw "Error revoking [FullAccess] permission for user [$($removeFullAccessPermissionSplatParams.User.DisplayName)] to mailbox [$($removeFullAccessPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw "Error revoking [FullAccess] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 '@
 #endregion Remove Full Access Permission script
@@ -1030,24 +1031,24 @@ catch {
 try {
     # More information about the cmdlet and the supported parameters: https://learn.microsoft.com/en-us/powershell/module/exchange/add-recipientpermission?view=exchange-ps
     $addSendAsPermissionSplatParams = @{
-        Identity     = $exchangeMailbox # The Exchange mailbox
-        Trustee      = $exchangeUser # The object to add the permission to the Exchange mailbox to. Can be a user and group object
-        AccessRights = "SendAs" # The type of permission to add
-        Confirm      = $false # Avoids the prompt for confirmation (as this cannot be confirmed when running an automated task)
-        ErrorAction  = "Stop" # Makes sure the action enters the catch when an error occurs
+        Identity     = $exchangeMailbox.Guid
+        Trustee      = $exchangeUser.guid
+        AccessRights = "SendAs"
+        Confirm      = $false 
+        ErrorAction  = "Stop"
     }
 
     $AddRecipientPermissions = Add-RecipientPermission @addSendAsPermissionSplatParams
 
-    Write-Information "Successfully granted [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]"
+    Write-Information "Successfully granted [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]"
 
     $Log = @{
         Action            = "GrantMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Successfully granted [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
+        Message           = "Successfully granted [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
-        TargetIdentifier  = $addSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
@@ -1061,15 +1062,15 @@ catch {
     $Log = @{
         Action            = "GrantMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Error granting [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
+        Message           = "Error granting [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
         IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $addSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
-        TargetIdentifier  = $addSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
 
-    throw "Error granting [SendAs] permission for user [$($addSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($addSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw "Error granting [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 '@
 #endregion Add Send As Permission script
@@ -1292,26 +1293,26 @@ catch {
 try {
     # More information about the cmdlet and the supported parameters: https://learn.microsoft.com/en-us/powershell/module/exchange/remove-recipientpermission?view=exchange-ps
     $removeSendAsPermissionSplatParams = @{
-        Identity     = $exchangeMailbox # The Exchange mailbox
-        Trustee      = $exchangeUser # The object to remove the permission to the Exchange mailbox from. Can be a user and group object
-        AccessRights = "SendAs" # The type of permission to remove
-        Confirm      = $false # Avoids the prompt for confirmation (as this cannot be confirmed when running an automated task)
-        ErrorAction  = "Stop" # Makes sure the action enters the catch when an error occurs
-    }
+        Identity     = $exchangeMailbox.Guid
+        Trustee      = $exchangeUser.guid
+        AccessRights = "SendAs"
+        ErrorAction  = "Stop"
+        Confirm      = $false
+    } 
 
     Write-Verbose "Revoking [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee)] to mailbox [$($removeSendAsPermissionSplatParams.Identity)]"
 
     $removeSendAsPermission = Remove-RecipientPermission @removeSendAsPermissionSplatParams
 
-    Write-Information "Successfully revoked [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]"
+    Write-Information "Successfully revoked [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]"
 
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Successfully revoked [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]" # required (free format text) 
+        Message           = "Successfully revoked [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $removeSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
-        TargetIdentifier  = $removeSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
@@ -1325,15 +1326,15 @@ catch {
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "ExchangeOnline" # optional (free format text) 
-        Message           = "Error revoking [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
+        Message           = "Error revoking [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)" # required (free format text) 
         IsError           = $true # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
-        TargetDisplayName = $removeSendAsPermissionSplatParams.Trustee.DisplayName # optional (free format text)
-        TargetIdentifier  = $removeSendAsPermissionSplatParams.Trustee.Identity # optional (free format text)
+        TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
+        TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
     }
     #send result back  
     Write-Information -Tags "Audit" -MessageData $log
 
-    throw "Error revoking [SendAs] permission for user [$($removeSendAsPermissionSplatParams.Trustee.DisplayName)] to mailbox [$($removeSendAsPermissionSplatParams.Identity.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
+    throw "Error revoking [SendAs] permission for user [$($exchangeUser.DisplayName)] to mailbox [$($exchangeMailbox.DisplayName)]. Error Message: $($errorMessage.AuditErrorMessage)"
 }
 '@
 #endregion Remove Send As Permission script
