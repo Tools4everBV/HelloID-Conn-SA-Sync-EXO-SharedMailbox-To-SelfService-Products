@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-SA-Sync-EXO-SharedMailboxes-To-Products
 #
-# Version: 2.2.0
+# Version: 3.0.0
 #####################################################
 $VerbosePreference = "SilentlyContinue"
 $informationPreference = "Continue"
