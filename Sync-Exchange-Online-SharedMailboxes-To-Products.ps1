@@ -1987,70 +1987,6 @@ function Get-ResourceOwnerGroupName {
     }
 }
 
-function Resolve-HTTPError {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
-    )
-    process {
-        $httpErrorObj = [PSCustomObject]@{
-            FullyQualifiedErrorId = $ErrorObject.FullyQualifiedErrorId
-            MyCommand             = $ErrorObject.InvocationInfo.MyCommand
-            RequestUri            = $ErrorObject.TargetObject.RequestUri
-            ScriptStackTrace      = $ErrorObject.ScriptStackTrace
-            ErrorMessage          = ""
-        }
-
-        if ($ErrorObject.Exception.GetType().FullName -eq "Microsoft.PowerShell.Commands.HttpResponseException") {
-            # $httpErrorObj.ErrorMessage = $ErrorObject.ErrorDetails.Message # Does not show the correct error message for the Raet IAM API calls
-            $httpErrorObj.ErrorMessage = $ErrorObject.Exception.Message
-
-        }
-        elseif ($ErrorObject.Exception.GetType().FullName -eq "System.Net.WebException") {
-            $httpErrorObj.ErrorMessage = [System.IO.StreamReader]::new($ErrorObject.Exception.Response.GetResponseStream()).ReadToEnd()
-        }
-
-        Write-Output $httpErrorObj
-    }
-}
-
-function Get-ErrorMessage {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory,
-            ValueFromPipeline
-        )]
-        [object]$ErrorObject
-    )
-    process {
-        $errorMessage = [PSCustomObject]@{
-            VerboseErrorMessage = $null
-            AuditErrorMessage   = $null
-        }
-
-        if ( $($ErrorObject.Exception.GetType().FullName -eq "Microsoft.PowerShell.Commands.HttpResponseException") -or $($ErrorObject.Exception.GetType().FullName -eq "System.Net.WebException")) {
-            $httpErrorObject = Resolve-HTTPError -Error $ErrorObject
-
-            $errorMessage.VerboseErrorMessage = $httpErrorObject.ErrorMessage
-
-            $errorMessage.AuditErrorMessage = $httpErrorObject.ErrorMessage
-        }
-
-        # If error message empty, fall back on $ex.Exception.Message
-        if ([String]::IsNullOrEmpty($errorMessage.VerboseErrorMessage)) {
-            $errorMessage.VerboseErrorMessage = $ErrorObject.Exception.Message
-        }
-        if ([String]::IsNullOrEmpty($errorMessage.AuditErrorMessage)) {
-            $errorMessage.AuditErrorMessage = $ErrorObject.Exception.Message
-        }
-
-        Write-Output $errorMessage
-    }
-}
-
 function Invoke-HelloIDRestMethod {
     [CmdletBinding()]
     param (
@@ -2478,11 +2414,18 @@ try {
             }
             catch {
                 $ex = $PSItem
-                $errorMessage = Get-ErrorMessage -ErrorObject $ex
-                
-                Write-StatusMessage -Event "Error" -Message "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($($errorMessage.VerboseErrorMessage))"
-                
-                Write-SummaryMessage -Event "Failed" -Message "Error creating HelloID Self service Category [$categoryName]. Error Message: $($errorMessage.AuditErrorMessage)"
+                if ($($ex.Exception.GetType().FullName -eq "Microsoft.PowerShell.Commands.HttpResponseException") -or
+                    $($ex.Exception.GetType().FullName -eq "System.Net.WebException")) {
+                    $errorObj = Resolve-HelloIDError -ErrorObject $ex
+                    $warningMessage = "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+                    $errorMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+                }
+                else {
+                    $warningMessage = "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+                    $errorMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+                }
+                Write-StatusMessage -Event "Error" -Message $warningMessage
+                Write-SummaryMessage -Event "Failed" -Message $errorMessage
                 exit
             }
         }
@@ -2606,11 +2549,18 @@ try {
                     }
                     catch {
                         $ex = $PSItem
-                        $errorMessage = Get-ErrorMessage -ErrorObject $ex
-                        
-                        Write-StatusMessage -Event "Error" -Message "Error at Line [$($ex.InvocationInfo.ScriptLineNumber)]: $($ex.InvocationInfo.Line). Error: $($($errorMessage.VerboseErrorMessage))"
-                        
-                        Write-SummaryMessage -Event "Failed" -Message "Error creating new resource owner group [$($resourceOwnerGroupName)] for HelloID Self service Product [$($productConfig.Name)]. Error Message: $($errorMessage.AuditErrorMessage)"
+                        if ($($ex.Exception.GetType().FullName -eq "Microsoft.PowerShell.Commands.HttpResponseException") -or
+                            $($ex.Exception.GetType().FullName -eq "System.Net.WebException")) {
+                            $errorObj = Resolve-HelloIDError -ErrorObject $ex
+                            $warningMessage = "Error at Line '$($errorObj.ScriptLineNumber)': $($errorObj.Line). Error: $($errorObj.ErrorDetails)"
+                            $errorMessage = "Error $($actionMessage). Error: $($errorObj.FriendlyMessage)"
+                        }
+                        else {
+                            $warningMessage = "Error at Line '$($ex.InvocationInfo.ScriptLineNumber)': $($ex.InvocationInfo.Line). Error: $($ex.Exception.Message)"
+                            $errorMessage = "Error $($actionMessage). Error: $($ex.Exception.Message)"
+                        }
+                        Write-StatusMessage -Event "Error" -Message $warningMessage
+                        Write-SummaryMessage -Event "Failed" -Message $errorMessage
                         exit
                     }
                 }
