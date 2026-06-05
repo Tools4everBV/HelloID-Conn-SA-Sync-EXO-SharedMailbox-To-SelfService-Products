@@ -11,7 +11,7 @@ $WarningPreference = "Continue"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 ######################################################################################
-# Connection Configuration - Set up connections and commands to import for action scripts
+# Connection Configuration - Set up connection credentials
 ######################################################################################
 # HelloID API connection (required)
 $helloIDPortalBaseUrl = $portalBaseUrl # When running from HelloID, set from default Global Variable
