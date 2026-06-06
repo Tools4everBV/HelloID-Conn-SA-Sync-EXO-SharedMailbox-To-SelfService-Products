@@ -576,7 +576,7 @@ $addFullAccessPermissionScript = @"
 "@
 <# Then use a single-quoted here-string, where variables are interpreted literally and reproduced exactly #> 
 $addFullAccessPermissionScript = $addFullAccessPermissionScript + @'
-$User = $request.requestedFor.userName
+$User = $requestedFor.userName
 $AutoMapping = $true
 
 # Exchange Online Connection Configuration
@@ -757,7 +757,7 @@ $removeFullAccessPermissionScript = @"
 "@
 <# Then use a single-quoted here-string, where variables are interpreted literally and reproduced exactly #> 
 $removeFullAccessPermissionScript = $removeFullAccessPermissionScript + @'
-$User = $request.requestedFor.userName
+$User = $requestedFor.userName
 
 # Exchange Online Connection Configuration
 # $EntraIdOrganization = "" # Set from Global Variable
@@ -979,7 +979,7 @@ $addSendAsPermissionScript = @"
 "@
 <# Then use a single-quoted here-string, where variables are interpreted literally and reproduced exactly #> 
 $addSendAsPermissionScript = $addSendAsPermissionScript + @'
-$User = $request.requestedFor.userName
+$User = $requestedFor.userName
 
 # Exchange Online Connection Configuration
 # $EntraIdOrganization = "" # Set from Global Variable
@@ -1155,7 +1155,7 @@ $removeSendAsPermissionScript = @"
 "@
 <# Then use a single-quoted here-string, where variables are interpreted literally and reproduced exactly #> 
 $removeSendAsPermissionScript += $removeSendAsPermissionScript + @'
-$User = $request.requestedFor.userName
+$User = $requestedFor.userName
 
 # Exchange Online Connection Configuration
 # $EntraIdOrganization = "" # Set from Global Variable
@@ -1376,7 +1376,7 @@ $addSendOnBehalfPermissionScript = @"
 "@
 <# Then use a single-quoted here-string, where variables are interpreted literally and reproduced exactly #> 
 $addSendOnBehalfPermissionScript = $addSendOnBehalfPermissionScript + @'
-$User = $request.requestedFor.userName
+$User = $requestedFor.userName
 
 # Exchange Online Connection Configuration
 # $EntraIdOrganization = "" # Set from Global Variable
@@ -1553,7 +1553,7 @@ $removeSendOnBehalfPermissionScript = @"
 "@
 <# Then use a single-quoted here-string, where variables are interpreted literally and reproduced exactly #> 
 $removeSendOnBehalfPermissionScript += $removeSendOnBehalfPermissionScript + @'
-$User = $request.requestedFor.userName
+$User = $requestedFor.userName
 
 # Exchange Online Connection Configuration
 # $EntraIdOrganization = "" # Set from Global Variable
