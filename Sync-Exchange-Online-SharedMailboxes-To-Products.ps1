@@ -88,7 +88,7 @@ $commands = @("Get-User", "Get-EXOMailbox")
 # REQUIRED: "Guid" (unique identifier) and "DisplayName" (used in product/group names)
 # Common: Guid, DisplayName, PrimarySmtpAddress, UserPrincipalName, CustomAttribute1-15, etc.
 # Full list: https://learn.microsoft.com/en-us/powershell/module/exchange/get-exomailbox
-$mailboxPropertiesToRetrieve = @(
+$exchangeOnlineMailboxPropertiesToRetrieve = @(
     "Guid" # REQUIRED: (unique identifier)
     "Id"
     "Identity"
@@ -107,7 +107,7 @@ $mailboxPropertiesToRetrieve = @(
 # - By CustomAttribute: "CustomAttribute15 -eq 'HelloID'"
 #   (Recommended: Use a CustomAttribute to control which mailboxes are synced. This allows you to
 #    dynamically add/remove mailboxes from the sync without changing the script configuration.)
-$exchangeMailboxesFilter = $null
+$exchangeOnlineMailboxesFilter = $null
 ######################################################################################
 
 ######################################################################################
@@ -2157,9 +2157,9 @@ try {
     Write-Information "Successfully connected to Exchange Online"
 
     # Get Exchange Online Shared Mailboxes
-    $actionMessage = "querying Microsoft Exchange Online Shared Mailboxes that match filter [$exchangeMailboxesFilter] and retrieving properties [$($mailboxPropertiesToRetrieve -join ", ")]"
+    $actionMessage = "querying Microsoft Exchange Online Shared Mailboxes that match filter [$exchangeOnlineMailboxesFilter] and retrieving properties [$($exchangeOnlineMailboxPropertiesToRetrieve -join ", ")]"
     $getMicrosoftExchangeOnlineSharedMailboxesSplatParams = @{
-        Properties           = $mailboxPropertiesToRetrieve
+        Properties           = $exchangeOnlineMailboxPropertiesToRetrieve
         RecipientTypeDetails = "SharedMailbox"
         ResultSize           = "Unlimited"
         Verbose              = $false
@@ -2167,17 +2167,17 @@ try {
     }
 
     # Only apply filter if specified, otherwise get all shared mailboxes
-    if (-not[string]::IsNullOrEmpty($exchangeMailboxesFilter)) {
-        $getMicrosoftExchangeOnlineSharedMailboxesSplatParams['Filter'] = $exchangeMailboxesFilter
+    if (-not[string]::IsNullOrEmpty($exchangeOnlineMailboxesFilter)) {
+        $getMicrosoftExchangeOnlineSharedMailboxesSplatParams['Filter'] = $exchangeOnlineMailboxesFilter
     }
 
-    $mailboxes = Get-EXOMailbox @getMicrosoftExchangeOnlineSharedMailboxesSplatParams | Select-Object $mailboxPropertiesToRetrieve
-    Write-StatusMessage -Event Success -Message "Successfully queried Exchange Online Shared Mailboxes that match filter [$exchangeMailboxesFilter]. Result count: $(($sourceObjectsInScope | Measure-Object).Count)"
+    $exchangeOnlineMailboxes = Get-EXOMailbox @getMicrosoftExchangeOnlineSharedMailboxesSplatParams | Select-Object $exchangeOnlineMailboxPropertiesToRetrieve
+    Write-StatusMessage -Event Success -Message "Successfully queried Exchange Online Shared Mailboxes that match filter [$exchangeOnlineMailboxesFilter]. Result count: $(($sourceObjectsInScope | Measure-Object).Count)"
 
     # Build list of source objects in scope based on query results (to use in further actions)
     $sourceObjectsInScope = [System.Collections.Generic.List[Object]]::New()
-    foreach ($mailbox in $mailboxes) {
-        [void]$sourceObjectsInScope.Add($mailbox)
+    foreach ($exchangeOnlineMailbox in $exchangeOnlineMailboxes) {
+        [void]$sourceObjectsInScope.Add($exchangeOnlineMailbox)
     }
 
     if (($sourceObjectsInScope | Measure-Object).Count -eq 0) {
