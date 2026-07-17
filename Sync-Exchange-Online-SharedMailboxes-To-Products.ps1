@@ -1680,7 +1680,7 @@ try {
     $Log = @{
         Action            = "RevokeMembership" # optional. ENUM (undefined = default) 
         System            = "Exchange" # optional (free format text) 
-        Message           = "Successfully revoked permission [FullAccess] from mailbox [$($exchangeMailbox.DisplayName) ($($exchangeMailbox.Guid))] for user [$($exchangeUser.userPrincipalName) ($($exchangeUser.guid))]" # required (free format text) 
+        Message           = "Successfully revoked permission [SendOnBehalf] from mailbox [$($exchangeMailbox.DisplayName) ($($exchangeMailbox.Guid))] for user [$($exchangeUser.userPrincipalName) ($($exchangeUser.guid))]" # required (free format text) 
         IsError           = $false # optional. Elastic reporting purposes only. (default = $false. $true = Executed action returned an error) 
         TargetDisplayName = $exchangeUser.DisplayName # optional (free format text)
         TargetIdentifier  = $([string]$exchangeUser.Guid) # optional (free format text)
