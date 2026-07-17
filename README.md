@@ -1,80 +1,117 @@
 # HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products
-Synchronizes Exchange Online Shared Mailboxes to HelloID Self service products
 
-<a href="https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products/network/members"><img src="https://img.shields.io/github/forks/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products" alt="Forks Badge"/></a>
-<a href="https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products/pulls"><img src="https://img.shields.io/github/issues-pr/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products" alt="Pull Requests Badge"/></a>
-<a href="https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products/issues"><img src="https://img.shields.io/github/issues/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products" alt="Issues Badge"/></a>
-<a href="https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products?color=2b9348"></a>
+> [!IMPORTANT]
+> **Best Practice - Maximum Synchronization Frequency: Once per day**
+>
+> **Why this maximum?**
+> New resources are typically created daily or weekly, not hourly. More frequent synchronization causes unnecessary API calls and processing load on both source systems and HelloID without business value.
+>
+> If a higher frequency is required for your organization, please contact **Tools4ever Support**. This helps us understand your use case and provide proper guidance.
 
-| :information_source: Information                                                                                                                                                                                                                                                                                                                                                       |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements. |
+> [!IMPORTANT]  
+> This repository contains the connector and configuration code only. The implementer is responsible to acquire the connection details such as username, password, certificate, etc. You might even need to sign a contract or agreement with the supplier before implementing this connector. Please contact the client's application manager to coordinate the connector requirements.
+
+> [!WARNING]
+> **Version 3.0.0 contains breaking changes!**
+> 
+> This version introduces a complete restructuring of the configuration approach. **Do not blindly upgrade from version 2.x without reviewing and migrating your configuration!**
+> 
+> **Major breaking changes:**
+> - Configuration variables have been renamed (e.g., `$ProductSkuPrefix` → `$productIdentifierPrefix`)
+> - Product configuration now uses a function-based approach (`New-HelloIDProductConfiguration`)
+> - Resource owner mode changed from `$calculateProductResourceOwnerPrefixSuffix` to `$resourceOwnerMode` with "Fixed" or "Calculated" values
+> - Update behavior settings have been restructured with new safety controls
+> 
+> **Before upgrading:**
+> 1. Review the [CHANGELOG.md](CHANGELOG.md) for all changes
+> 2. Back up your current configuration
+> 3. Test the new version in a non-production environment first
+> 4. Migrate your configuration according to the new structure
+> 
+> See [Configuration options](#configuration-options) below for the new configuration structure.
 
 ## Table of Contents
 - [HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products](#helloid-conn-sa-sync-exo-sharedmailbox-to-selfservice-products)
   - [Table of Contents](#table-of-contents)
-  - [Requirements](#requirements)
-  - [Introduction](#introduction)
+  - [Description](#description)
   - [Getting started](#getting-started)
-      - [App Registration \& Certificate Setup](#app-registration--certificate-setup)
-      - [HelloID-specific configuration](#helloid-specific-configuration)
-      - [Convert .pfx to base64 string](#convert-pfx-to-base64-string)
+    - [Requirements](#requirements)
+    - [App Registration \& Certificate Setup](#app-registration--certificate-setup)
+    - [HelloID-specific configuration](#helloid-specific-configuration)
+    - [Convert .pfx to base64 string](#convert-pfx-to-base64-string)
     - [Connection settings](#connection-settings)
-    - [Installing the Microsoft Exchange Online PowerShell V3.1 module](#installing-the-microsoft-exchange-online-powershell-v31-module)
-    - [Getting the Microsoft Entra ID graph API access](#getting-the-microsoft-entra-id-graph-api-access)
-      - [Creating the Microsoft Entra ID App Registration and certificate](#creating-the-microsoft-entra-id-app-registration-and-certificate)
-      - [Application Registration](#application-registration)
-      - [Configuring App Permissions](#configuring-app-permissions)
-      - [Assign Microsoft Entra ID roles to the application](#assign-microsoft-entra-id-roles-to-the-application)
-    - [Synchronization settings](#synchronization-settings)
+    - [Configuration options](#configuration-options)
+      - [Script Behavior](#script-behavior)
+      - [Product Lifecycle](#product-lifecycle)
+      - [Source Data Selection](#source-data-selection)
+      - [Product Identification](#product-identification)
+      - [Product Configuration](#product-configuration)
+      - [Resource Owner Configuration](#resource-owner-configuration)
+      - [Update Behavior](#update-behavior)
   - [Remarks](#remarks)
+    - [Products are created and removed automatically](#products-are-created-and-removed-automatically)
+    - [Function-based product configuration](#function-based-product-configuration)
+    - [Combined with permissions sync](#combined-with-permissions-sync)
+    - [Test run mode](#test-run-mode)
   - [Getting help](#getting-help)
-  - [HelloID Docs](#helloid-docs)
+  - [HelloID docs](#helloid-docs)
 
-## Requirements
-- Make sure you have Windows PowerShell 5.1 installed on the server where the HelloID agent and Service Automation agent are running.
-- Installed and available **Microsoft Exchange Online PowerShell V3.1 module**. Please see the [Microsoft documentation](https://learn.microsoft.com/en-us/powershell/exchange/exchange-online-powershell-v2?view=exchange-ps) for more information. The download [can be found here](https://www.powershellgallery.com/packages/ExchangeOnlineManagement/3.0.0).
-- Required to run **On-Premises** since it is not allowed to import a module with the Cloud Agent.
-- An **App Registration in Microsoft Entra ID** is required.
-- Make sure the sychronization is configured to meet your requirements.
+## Description
 
-## Introduction
-By using this connector, you will have the ability to create and remove HelloID SelfService Products based on shared mailboxes in your Exchange Online environment.
+HelloID-Conn-SA-Sync-EXO-SharedMailbox-To-SelfService-Products is a scheduled task designed for use with HelloID Service Automation (SA). This task automatically synchronizes Exchange Online shared mailboxes to HelloID Self Service products, enabling users to request access to shared mailboxes through the HelloID catalog.
 
-The products will be created for each mailbox in scope. This way you won't have to manually create a product for each group.
+By using this scheduled task, you will have the ability to:
 
-And vice versa for the removing of the products. The products will be removed (or disabled, based on your preference) when a mailbox is no longer in scope. This way no products will remain that "should no longer exist".
+1. **Automatically create HelloID Self Service products** for each shared mailbox in scope
+2. **Update product properties** when mailbox details change (e.g., product name/description when mailbox DisplayName changes)
+3. **Remove or disable products** when mailboxes are no longer in scope
+4. **Configure product actions** that grant permissions (Full Access, Send As, Send On Behalf) when products are requested
 
-This is intended for scenarios where there are (lots of) shared mailboxes that we want to be requestable as a product. This group sync is desinged to work in combination with the [EXO SharedMailbox FullAccess Permissions to Productassignments Sync](https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-FullAccess-Permissions-To-HelloID-Productassignments).
+This eliminates the need to manually create and maintain products for each shared mailbox, especially valuable in organizations with many shared mailboxes. The task is designed to work in combination with the [EXO SharedMailbox FullAccess Permissions to Product Assignments Sync](https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-FullAccess-Permissions-To-HelloID-Productassignments).
 
 ## Getting started
 
-#### App Registration & Certificate Setup
+### Requirements
 
-Before implementing this connector, make sure to configure a Microsoft Entra ID App Registration. During the setup process, you'll create a new App Registration in the Entra portal, assign the necessary API permissions, and generate and assign a certificate.
+- Windows PowerShell 5.1 installed on the server where the HelloID agent and Service Automation agent are running
+- **Microsoft Exchange Online PowerShell V3 module** installed and available. See the [Microsoft documentation](https://learn.microsoft.com/en-us/powershell/exchange/exchange-online-powershell-v2?view=exchange-ps) for more information. The download [can be found here](https://www.powershellgallery.com/packages/ExchangeOnlineManagement)
+- Required to run **On-Premises** (not supported with Cloud Agent due to module import requirements)
+- An **App Registration in Microsoft Entra ID** configured with certificate-based authentication
+- The synchronization must be configured to meet your requirements before scheduling
+
+### App Registration & Certificate Setup
+
+Before implementing this scheduled task, you must configure a Microsoft Entra ID App Registration. During the setup process, you'll create a new App Registration in the Entra portal, assign the necessary API permissions, and generate and assign a certificate.
 
 Follow the official Microsoft documentation for creating an App Registration and setting up certificate-based authentication:
 
 - [App-only authentication with certificate (Exchange Online)](https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps#set-up-app-only-authentication)
 
-#### HelloID-specific configuration
+### HelloID-specific configuration
 
 Once you have completed the Microsoft setup and followed their best practices, configure the following HelloID-specific requirements.
 
-- **API Permissions** (Application permissions):
-  - `User.Read.All` - To validate email uniqueness by listing users via Graph API
-  - `Domain.Read.All` - To retrieve verified domains for the mail domain dropdown
-  - `Exchange.ManageAsApp` - To create and manage shared mailboxes
-- **Entra ID Role assignment:**
-  - Assign the **Exchange Administrator** role to the App Registration
-- **Certificate:**
-  - Upload the public key file (.cer) in Entra ID
-  - Provide the certificate as a Base64 string in HelloID.
+**API Permissions** (Application permissions):
+- `Exchange.ManageAsApp` - To read shared mailbox information and manage mailbox permissions
 
-#### Convert .pfx to base64 string
-HelloID requires a base64 string to import the certificate. With the example below, it is possible to create a base64 string
+**Entra ID Role assignment:**
+- Assign the **Exchange Administrator** role to the App Registration
 
-```Powershell
+**Certificate:**
+- Upload the public key file (.cer) in Entra ID
+- Provide the certificate as a Base64 string in HelloID
+
+> [!NOTE]
+> For more information about the required permissions, please see the Microsoft docs:
+> - [Permissions in Exchange Online](https://learn.microsoft.com/en-us/exchange/permissions-exo/permissions-exo)
+> - [Find the permissions required to run any Exchange cmdlet](https://learn.microsoft.com/en-us/powershell/exchange/find-exchange-cmdlet-permissions?view=exchange-ps)
+> - [View and assign administrator roles in Microsoft Entra ID](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/manage-roles-portal)
+
+### Convert .pfx to base64 string
+
+HelloID requires a base64 string to import the certificate. Use the example below to create a base64 string:
+
+```powershell
 $filePath = 'C:\Cert'
 $pfxCertName = 'Cert.pfx'
 $pfxPath = "$filePath\$pfxCertName"
@@ -85,101 +122,178 @@ $fileContentBytes = [System.IO.File]::ReadAllBytes("$pfxPath")
 
 ### Connection settings
 
-The following global variables must be configured in HelloID when importing and configuring the delegated form.
+The following global variables must be configured in HelloID when setting up the scheduled task.
 
-| Setting                        | Description                                                              | Mandatory |
-| ------------------------------ | ------------------------------------------------------------------------ | --------- |
-| EntraIdOrganization            | The Entra organization name (domain)                                     | Yes       |
-| EntraIdTenantId                | The Entra tenant ID (GUID)                                               | Yes       |
-| EntraIdAppId                   | The unique identifier (ID) of the App Registration in Microsoft Entra ID | Yes       |
-| EntraIdCertificateBase64String | The Base64-encoded string representation of the app certificate          | Yes       |
-| EntraIdCertificatePassword     | The password associated with the app certificate                         | Yes       |
+| Setting | Description | Mandatory |
+| ------- | ----------- | --------- |
+| `portalBaseUrl` | The base URL of your HelloID portal | Yes (Default Global Variable) |
+| `portalApiKey` | The API key for HelloID portal access | Yes (Default Global Variable) |
+| `portalApiSecret` | The API secret for HelloID portal access | Yes (Default Global Variable) |
+| `EntraIdOrganization` | The Entra organization name (domain) | Yes (Recommended as Global Variable) |
+| `EntraIdAppId` | The unique identifier (ID) of the App Registration in Microsoft Entra ID | Yes (Recommended as Global Variable) |
+| `EntraIdCertificateBase64String` | The Base64-encoded string representation of the app certificate | Yes (Recommended as Global Variable) |
+| `EntraIdCertificatePassword` | The password associated with the app certificate | Yes (Recommended as Global Variable) |
 
-### Installing the Microsoft Exchange Online PowerShell V3.1 module
-Since we use the cmdlets from the Microsoft Exchange Online PowerShell module, it is required this module is installed and available for the service account.
-Please follow the [Microsoft documentation on how to install the module](https://learn.microsoft.com/en-us/powershell/exchange/exchange-online-powershell-v2?view=exchange-ps#install-and-maintain-the-exchange-online-powershell-module). 
+> [!NOTE]
+> When running inside HelloID, `portalBaseUrl`, `portalApiKey`, and `portalApiSecret` are provided automatically as default global variables.
 
-### Getting the Microsoft Entra ID graph API access
-#### Creating the Microsoft Entra ID App Registration and certificate
-> _The steps below are based on the [Microsoft documentation](https://docs.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2?view=exchange-ps) as of the moment of release. The Microsoft documentation should always be leading and is susceptible to change. The steps below might not reflect those changes._
-> >**Please note that our steps differ from the current documentation as we use Access Token Based Authentication instead of Certificate Based Authentication**
+### Configuration options
 
-#### Application Registration
-The first step is to register a new **Microsoft Entra ID Application**. The application is used to connect to Exchange and to manage permissions.
+The scheduled task includes extensive configuration options organized into logical sections. All configuration is done directly in the PowerShell script through variables and functions. Below is an overview of the main configuration areas.
 
-* Navigate to **App Registrations** in Microsoft Entra ID, and select “New Registration” (**Microsoft Entra Portal > Microsoft Entra ID > App Registration > New Application Registration**).
-* Next, give the application a name. In this example we are using “**ExO PowerShell CBA**” as application name.
-* Specify who can use this application (**Accounts in this organizational directory only**).
-* Specify the Redirect URI. You can enter any url as a redirect URI value. In this example we used http://localhost because it doesn't have to resolve.
-* Click the “**Register**” button to finally create your new application.
+#### Script Behavior
 
-Some key items regarding the application are the Application ID (which is the Client ID), the Directory ID (which is the Tenant ID) and Client Secret.
+Controls testing and logging behavior:
 
-#### Configuring App Permissions
-The [Microsoft Graph documentation](https://docs.microsoft.com/en-us/graph) provides details on which permission are required for each permission type.
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `$dryRun` | If `$true`, shows what would happen without making changes | `$false` |
+| `$verboseLogging` | If `$true`, logs every action (generates lots of log data) | `$false` |
+| `$testRun` | If `$true`, limits operations based on max values below | `$true` |
+| `$testRunMaxCreates` | Maximum products to CREATE in test run | `1` |
+| `$testRunMaxUpdates` | Maximum products to UPDATE in test run | `1` |
+| `$testRunMaxDeletes` | Maximum products to DELETE in test run | `1` |
 
-* To assign your application the right permissions, navigate to **Microsoft Entra Portal > Microsoft Entra ID > App Registrations**.
-* Select the application we created before, and select “**API Permissions**” or “**View API Permissions**”.
-* To assign a new permission to your application, click the “**Add a permission**” button.
-* From the “**Request API Permissions**” screen click “**Office 365 Exchange Online**”.
-  > _The Office 365 Exchange Online might not be a selectable API. In thise case, select "APIs my organization uses" and search here for "Office 365 Exchange Online"__
-* For this connector the following permissions are used as **Application permissions**:
-  *	Manage Exchange As Application ***Exchange.ManageAsApp***
-* To grant admin consent to our application press the “**Grant admin consent for TENANT**” button.
+#### Product Lifecycle
 
-#### Assign Microsoft Entra ID roles to the application
-Microsoft Entra ID has more than 50 admin roles available. The **Exchange Administrator** role should provide the required permissions for any task in Exchange Online PowerShell. However, some actions may not be allowed, such as managing other admin accounts, for this the Global Administrator would be required. and Exchange Administrator roles. Please note that the required role may vary based on your configuration.
-* To assign the role(s) to your application, navigate to **Microsoft Entra Portal > Microsoft Entra ID > Roles and administrators**.
-* On the Roles and administrators page that opens, find and select one of the supported roles e.g. “**Exchange Administrator**” by clicking on the name of the role (not the check box) in the results.
-* On the Assignments page that opens, click the “**Add assignments**” button.
-* In the Add assignments flyout that opens, **find and select the app that we created before**.
-* When you're finished, click **Add**.
-* Back on the Assignments page, **verify that the app has been assigned to the role**.
+Safety thresholds and removal behavior:
 
-For more information about the permissions, please see the Microsoft docs:
-* [Permissions in Exchange Online](https://learn.microsoft.com/en-us/exchange/permissions-exo/permissions-exo).
-* [Find the permissions required to run any Exchange cmdlet](https://learn.microsoft.com/en-us/powershell/exchange/find-exchange-cmdlet-permissions?view=exchange-ps).
-* [View and assign administrator roles in Microsoft Entra ID](https://learn.microsoft.com/en-us/powershell/exchange/find-exchange-cmdlet-permissions?view=exchange-ps).
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `$createThreshold` | Maximum number of NEW products to create in one run (safety limit) | `10` |
+| `$updateThreshold` | Maximum number of EXISTING products to update in one run | `10` |
+| `$removeThreshold` | Maximum number of products to disable/remove in one run | `10` |
+| `$removeProductBehavior` | What happens when a product no longer exists: `"None"`, `"Disable"`, or `"Remove"` | `"Remove"` |
+| `$removeResourceOwnerGroupWithProduct` | Remove resource owner group when product is removed | `$true` |
 
-### Synchronization settings
+#### Source Data Selection
 
-| Variable name                              | Description                                                                                                                    | Notes                                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $portalBaseUrl                             | String value of HelloID Base Url                                                                                               | (Default Global Variable)                                                                                                                                                                                                                                                                                      |
-| $portalApiKey                              | String value of HelloID Api Key                                                                                                | (Default Global Variable)                                                                                                                                                                                                                                                                                      |
-| $portalApiSecret                           | String value of HelloID Api Secret                                                                                             | (Default Global Variable)                                                                                                                                                                                                                                                                                      |
-| $EntraOrganization                         | String value of Microsoft Entra ID Organization                                                                                | Recommended to set as Global Variable                                                                                                                                                                                                                                                                          |
-| $EntraTenantID                             | String value of Microsoft Entra ID Tenant ID                                                                                   | Recommended to set as Global Variable                                                                                                                                                                                                                                                                          |
-| $EntraAppID                                | String value of Microsoft Entra ID App ID                                                                                      | Recommended to set as Global Variable                                                                                                                                                                                                                                                                          |
-| $EntraAppSecret                            | String value of Microsoft Entra ID App Secret                                                                                  | Recommended to set as Global Variable                                                                                                                                                                                                                                                                          |
-| $exchangeMailboxesFilter                   | String value of filter of which EXO shared mailboxes to include                                                                | Optional, when no filter is provided ($exchangeMailboxesFilter = $null), all mailboxes will be queried                                                                                                                                                                                                         |
-| $productAccessGroup                        | String value of which HelloID group will have access to the products                                                           | Optional, if not found, the product is created without Access Group                                                                                                                                                                                                                                            |
-| $calculateProductResourceOwnerPrefixSuffix | Boolean value of whether to check for a specific "owner" group in HelloID to use as resource owner for the products            | Optional, can only be used when the "owner group" exists and is available in HelloID                                                                                                                                                                                                                           |
-| $calculatedResourceOwnerGroupSource        | String value of source of the shared mailboxes in HelloID                                                                      | Optional, if left empty, this will result in creation of a new group                                                                                                                                                                                                                                           |
-| $calculatedResourceOwnerGroupPrefix        | String value of prefix to recognize the owner group                                                                            | Optional, the owner group will be queried based on the group name and the specified prefix and suffix - if both left empty, this will result in creation of a new group - if group is not found, it will be created                                                                                            |
-| $calculatedResourceOwnerGroupSuffix        | String value of suffix to recognize the owner group                                                                            | Optional, the owner group will be queried based on the group name and the specified prefix and suffix - if both left empty, this will result in creation of a new group - if group is not found, it will be created                                                                                            |
-| $productResourseOwner                      | String value of which HelloID group to use as resource owner for the products                                                  | Optional, if empty the groupname will be: "local/[group displayname] Resource Owners"                                                                                                                                                                                                                          |
-| $productApprovalWorkflowId                 | String value of HelloID Approval Workflow GUID to use for the products                                                         | Optional, if empty. The Default HelloID Workflow is used. If specified Workflow does not exist the task will fail                                                                                                                                                                                              |
-| $productVisibility                         | String value of which Visbility to use for the products                                                                        | Supported values: All, Resource Owner And Manager, Resource Owner, Disabled. For more information, see the HelloID Docs [here](https://docs.helloid.com/en/service-automation/products/product-settings-reference.html)                                                                                        |
-| $productRequestCommentOption               | String value of which Comment Option to use for the products                                                                   | Supported values: Optional, Hidden, Required. For more information, see the HelloID Docs [here](https://docs.helloid.com/en/service-automation/products/product-settings-reference.html)                                                                                                                       |
-| $productAllowMultipleRequests              | Boolean value of whether to allow Multiple Requests for the products                                                           | If True, the product can be requested unlimited times                                                                                                                                                                                                                                                          |
-| $productFaIcon                             | String value of which Font Awesome icon to use for the products                                                                | For more valid icon names, see the Font Awesome cheat sheet [here](https://fontawesome.com/v5/cheatsheet)                                                                                                                                                                                                      |
-| $productCategory                           | String value of which HelloID category will be used for the products                                                           | Required, must be an existing category if not found, the task will fail                                                                                                                                                                                                                                        |
-| $productReturnOnUserDisable                | Boolean value of whether to set the option Return Product On User Disable for the products                                     | For more information, see the HelloID Docs [here](https://docs.helloid.com/en/service-automation/products/product-settings-reference.html)                                                                                                                                                                     |
-| $removeProduct                             | Boolean value of whether to remove the products when they are no longer in scope                                               | If set to $false, obsolete products will be disabled                                                                                                                                                                                                                                                           |
-| $overwriteExistingProduct                  | Boolean value of whether to overwrite existing products in scope with the specified properties of this task                    | If True, existing product will be overwritten with the input from this script (e.g. the approval worklow or icon). Only use this when you actually changed the product input. **Note:** Actions are always overwritten, no compare takes place between the current actions and the actions this sync would set |
-| $overwriteAccessGroup                      | Boolean value of whether to overwrite existing access groups in scope with the specified access group this task                | Should be on false by default, only set this to true to overwrite product access group - Only meant for "manual" bulk update, not daily scheduled. **Note:** Access group is always overwritten, no compare takes place between the current access group and the access group this sync would set              |
-| $ProductSkuPrefix                          | String value of prefix that will be used in the Code for the products                                                          | Optional, but recommended, when no SkuPrefix is provided the products won't be recognizable as created by this task                                                                                                                                                                                            |
-| $exchangeMailboxUniqueProperty             | String value of name of the property that is unique for the EXO shared mailboxes and will be used in the Code for the products | The default value ("GUID") is set be as unique as possible                                                                                                                                                                                                                                                     |
+Controls which mailboxes are synchronized:
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `$commands` | PowerShell commands to import from Exchange Online module | `@("Get-User", "Get-EXOMailbox")` |
+| `$mailboxPropertiesToRetrieve` | Array of mailbox properties to retrieve | See script for full list |
+| `$exchangeMailboxesFilter` | Filter which mailboxes to sync (e.g., `"DisplayName -like 'Shared*'"`) | `$null` (all mailboxes) |
+
+#### Product Identification
+
+Defines how products are uniquely identified:
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `$productIdentifierPrefix` | Prefix used in product codes (max 8 characters, UPPERCASE, no dashes) | `"SHRDMBX"` |
+| `$sourceObjectUniqueProperty` | Source object property used to uniquely identify objects | `"GUID"` |
+
+#### Product Configuration
+
+The `New-HelloIDProductConfiguration` function defines all product properties. This function is called once per mailbox and returns a hashtable containing:
+
+- **Identification & Naming**: Code, Name, Description, SourceIdentifier
+- **Visibility & Access**: Visibility, AccessGroups
+- **Request Settings**: RequestCommentOption, AllowMultipleRequests
+- **Approval & Workflow**: ApprovalWorkflowId
+- **Appearance**: UseFaIcon, FaIcon, Icon
+- **Category**: Category name
+- **Form**: FormId (optional)
+- **Lifecycle**: ReturnOnUserDisable
+- **Time Limits**: HasTimeLimit, ManagerCanOverrideDuration, LimitType, OwnershipMaxDuration
+- **Agent Pool**: AgentPool name
+- **Pricing**: ShowPrice, Price (optional)
+- **Risk Assessment**: HasRiskFactor, RiskFactor (optional)
+- **Limits**: MaxCount (optional)
+- **Product Actions**: onRequest, onApprove, onDeny, onReturn, onWithdrawn
+
+> [!TIP]
+> The function includes comprehensive inline documentation explaining each property. Review the script to customize product configuration to your requirements.
+
+#### Resource Owner Configuration
+
+Determines who manages the products:
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `$resourceOwnerMode` | `"Fixed"` (same group for all) or `"Calculated"` (unique per product) | `"Calculated"` |
+| `$productResourceOwner` | Resource owner group when using Fixed mode | `"Local/__HelloID_Administrators"` |
+| `$calculatedResourceOwnerGroupSource` | Source for calculated groups: `"AzureAD"` or `"Local"` | `"Local"` |
+| `$calculatedResourceOwnerGroupPrefix` | Prefix for calculated resource owner group names | `""` |
+| `$calculatedResourceOwnerGroupSuffix` | Suffix for calculated resource owner group names | `" Resource Owner"` |
+
+#### Update Behavior
+
+Controls when and how existing products are updated:
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `$overwriteExistingProduct` | If `$true`, updates existing products with configured properties | `$true` |
+| `$productPropertiesToUpdate` | Array of product property names to update | `@("name")` |
+| `$updateResourceOwnerGroupOnNameChange` | Rename resource owner groups when source names change (Calculated mode only) | `$true` |
+| `$accessGroupUpdateBehavior` | How to update access groups: `"None"`, `"Add"`, or `"Replace"` | `"None"` |
+| `$overwriteExistingProductAction` | If `$true`, overwrites existing product action scripts | `$false` |
+| `$addMissingProductAction` | If `$true`, adds new actions to existing products | `$false` |
+| `$removeUnconfiguredActions` | If `$true`, removes actions not in `$actionsToUpdate` | `$false` |
+| `$actionsToUpdate` | Hashtable specifying which actions to update | See script |
+
+> [!WARNING]
+> - Setting `$overwriteExistingProduct` to `$true` will update ALL products matching the filter
+> - Overwriting or removing is IRREVERSIBLE - make backups before enabling
+> - Set update variables back to `$false` after bulk updates to prevent unintended changes
 
 ## Remarks
-- The Products are created and removed by default. Make sure your configuration is correct to avoid unwanted removals (and change this to disable)
-- This group sync is desinged to work in combination with the [EXO SharedMailbox FullAccess Permissions to Productassignments Sync](https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-FullAccess-Permissions-To-HelloID-Productassignments).
+
+### Products are created and removed automatically
+
+By default, this scheduled task both creates AND removes (or disables) products automatically. The `$removeProductBehavior` setting controls what happens to products when mailboxes are no longer in scope:
+
+- `"None"`: Keep products even when they no longer exist (requires manual cleanup)
+- `"Disable"`: Disable products when they no longer exist (reversible, recommended for testing)
+- `"Remove"`: Permanently delete products when they no longer exist (irreversible)
+
+> [!WARNING]
+> Make sure your configuration is correct before running in production, especially the `$removeProductBehavior` setting. Use `$testRun = $true` and `$dryRun = $true` for initial testing.
+
+### Function-based product configuration
+
+Version 3.0.0 introduces a function-based approach to product configuration. Instead of configuring properties through multiple script variables, all product settings are now defined in the `New-HelloIDProductConfiguration` function. This provides:
+
+- **Better organization**: All product properties in one place
+- **Comprehensive documentation**: Every property includes detailed inline comments
+- **Flexibility**: Easily customize products per mailbox using PowerShell logic
+- **Maintainability**: Changes to product structure are easier to implement
+
+### Combined with permissions sync
+
+This scheduled task is designed to work in combination with the [EXO SharedMailbox FullAccess Permissions to Product Assignments Sync](https://github.com/Tools4everBV/HelloID-Conn-SA-Sync-EXO-SharedMailbox-FullAccess-Permissions-To-HelloID-Productassignments). Together, these tasks provide:
+
+1. **This task**: Creates products for shared mailboxes with grant/revoke actions
+2. **Permissions sync**: Automatically assigns products to users who already have mailbox access
+
+This combination ensures that:
+- Users who already have access receive the product automatically (showing existing access)
+- Users can request access through Self Service (new access requests)
+- Revoking the product removes the mailbox permissions
+
+### Test run mode
+
+The scheduled task includes a test run mode to limit operations during testing:
+
+```powershell
+$testRun = $true
+$testRunMaxCreates = 1  # Only create 1 product
+$testRunMaxUpdates = 1  # Only update 1 product
+$testRunMaxDeletes = 1  # Only delete/disable 1 product
+```
+
+When `$testRun = $true`, the task will still retrieve ALL mailboxes for correct comparison, but will limit the actual create/update/delete operations. This allows you to safely test the synchronization behavior without affecting all products.
+
+> [!TIP]
+> Set `$testRun = $false` only after you've verified the task works correctly with test limits enabled.
 
 ## Getting help
-> _For more information on how to configure a HelloID PowerShell scheduled task, please refer to our [documentation](https://docs.helloid.com/hc/en-us/articles/115003253294-Create-Custom-Scheduled-Tasks) pages_
 
-> _If you need help, feel free to ask questions on our [forum](https://forum.helloid.com)_
+> [!TIP]
+> For more information on how to configure a HelloID PowerShell scheduled task, please refer to our [documentation](https://docs.helloid.com/en/service-automation/scheduled-tasks.html) pages.
 
-## HelloID Docs
+## HelloID docs
+
 The official HelloID documentation can be found at: https://docs.helloid.com/
