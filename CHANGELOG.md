@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com), and this project adheres to [Semantic Versioning](https://semver.org).
 
+## [3.0.2] - 2026-08-11
+
+### Fixed
+
+- **Action Preservation on Property Updates**: Fixed critical issue where product actions were lost when updating only product properties (name, description, etc.) without action update settings enabled. The script now correctly preserves all existing actions during property-only updates.
+
 ## [3.0.1] - 2026-07-29
 
 ### Fixed
