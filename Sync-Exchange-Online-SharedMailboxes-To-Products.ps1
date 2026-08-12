@@ -1,7 +1,7 @@
 #####################################################
 # HelloID-SA-Sync-EXO-SharedMailboxes-To-Products
 #
-# Version: 3.0.0
+# Version: 3.0.2
 #####################################################
 $VerbosePreference = "SilentlyContinue"
 $informationPreference = "Continue"
@@ -513,6 +513,7 @@ $productPropertiesToUpdate = @(
     # "requestComment"
     # "allowMultipleRequests"
     # "returnOnUserDisable"
+    # "resourceOwnerGroup"
 )
 
 # Update Resource Owner Group when product name changes
@@ -3403,6 +3404,45 @@ try {
                             foreach ($actionProperty in $actionProperties) {
                                 if ($actionProperty -notin $actionsToUpdate.Keys) {
                                     # Keep existing actions for this type as-is
+                                    if (($currentProductInHelloID.$actionProperty | Measure-Object).Count -gt 0) {
+                                        $updateBody | Add-Member -MemberType NoteProperty -Name $actionProperty -Value $currentProductInHelloID.$actionProperty -Force
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        # No action updates configured - preserve ALL existing actions to prevent deletion
+                        # This ensures that when updating only properties, actions are not accidentally removed
+                        
+                        # First, ensure we have the full product details (with actions)
+                        if (-not $fullProductDetailsCache.ContainsKey($existingProduct.Code)) {
+                            # Full product details not in cache - fetch them now to preserve actions
+                            try {
+                                $actionMessage = "fetching full product details for [$($existingProduct.Name)] to preserve actions during property update"
+                                $getProductSplatParams = @{
+                                    Uri     = "$($helloIDPortalBaseUrl)/api/v1/products/$($basicProductInfo.productId)"
+                                    Method  = 'GET'
+                                    Headers = $helloIDHeaders
+                                }
+                                $fullProductInfo = Invoke-HelloIDRestMethod @getProductSplatParams
+                                
+                                # Cache for later use
+                                $fullProductDetailsCache[$existingProduct.Code] = $fullProductInfo
+                            }
+                            catch {
+                                # If fetching fails, log warning but continue (actions may be lost)
+                                Write-StatusMessage -Event Warning -Message "Failed to fetch full product details for [$($existingProduct.Name)] to preserve actions. Actions may be lost during update. Error: $($_.Exception.Message)"
+                            }
+                        }
+                        
+                        # Now preserve all existing actions
+                        if ($fullProductDetailsCache.ContainsKey($existingProduct.Code)) {
+                            $currentProductInHelloID = $fullProductDetailsCache[$existingProduct.Code]
+                            
+                            if ($null -ne $currentProductInHelloID) {
+                                $actionProperties = @('onRequest', 'onApprove', 'onDeny', 'onReturn', 'onWithdraw')
+                                foreach ($actionProperty in $actionProperties) {
                                     if (($currentProductInHelloID.$actionProperty | Measure-Object).Count -gt 0) {
                                         $updateBody | Add-Member -MemberType NoteProperty -Name $actionProperty -Value $currentProductInHelloID.$actionProperty -Force
                                     }
